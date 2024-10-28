@@ -17,6 +17,9 @@
 
 #![doc = include_str!("../README.md")]
 
+// re-export dependencies from datafusion to minimize version maintenance for crate users
+pub use datafusion;
+
 pub mod context;
 pub mod extension;
 pub mod prelude;
