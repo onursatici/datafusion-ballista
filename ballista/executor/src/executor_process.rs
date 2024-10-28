@@ -184,7 +184,7 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     let config = RuntimeConfig::new().with_temp_file_path(work_dir.clone());
     let runtime = {
         let config = with_object_store_registry(config.clone());
-        Arc::new(RuntimeEnv::new(config).map_err(|_| {
+        Arc::new(RuntimeEnv::try_new(config).map_err(|_| {
             BallistaError::Internal("Failed to init Executor RuntimeEnv".to_owned())
         })?)
     };

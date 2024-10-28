@@ -55,6 +55,7 @@ use datafusion_proto::physical_plan::PhysicalExtensionCodec;
 use datafusion_proto::protobuf::LogicalPlanNode;
 use futures::StreamExt;
 use log::error;
+use std::fmt::{Debug, Formatter};
 use std::io::{BufWriter, Write};
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -70,7 +71,7 @@ pub fn default_session_builder(config: SessionConfig) -> SessionState {
         .with_default_features()
         .with_config(config)
         .with_runtime_env(Arc::new(
-            RuntimeEnv::new(with_object_store_registry(RuntimeConfig::default()))
+            RuntimeEnv::try_new(with_object_store_registry(RuntimeConfig::default()))
                 .unwrap(),
         ))
         .build()
@@ -267,7 +268,7 @@ pub fn create_df_ctx_with_ballista_query_planner<T: 'static + AsLogicalPlan>(
         .with_default_features()
         .with_config(session_config)
         .with_runtime_env(Arc::new(
-            RuntimeEnv::new(with_object_store_registry(RuntimeConfig::default()))
+            RuntimeEnv::try_new(with_object_store_registry(RuntimeConfig::default()))
                 .unwrap(),
         ))
         .with_query_planner(planner)
@@ -316,7 +317,7 @@ impl BallistaSessionStateExt for SessionState {
             .with_option_extension(config.clone());
 
         let runtime_config = RuntimeConfig::default();
-        let runtime_env = RuntimeEnv::new(runtime_config)?;
+        let runtime_env = RuntimeEnv::try_new(runtime_config)?;
         let session_state = SessionStateBuilder::new()
             .with_default_features()
             .with_config(session_config)
@@ -471,6 +472,16 @@ pub struct BallistaQueryPlanner<T: AsLogicalPlan> {
     extension_codec: Arc<dyn LogicalExtensionCodec>,
     local_planner: DefaultPhysicalPlanner,
     plan_repr: PhantomData<T>,
+}
+
+impl<T: 'static + AsLogicalPlan> Debug for BallistaQueryPlanner<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "BallistaQueryPlanner(scheduler_url={}, config={:?})",
+            &self.scheduler_url, &self.config
+        )
+    }
 }
 
 impl<T: 'static + AsLogicalPlan> BallistaQueryPlanner<T> {
@@ -664,7 +675,7 @@ mod test {
     use crate::utils::LocalRun;
 
     fn context() -> SessionContext {
-        let runtime_environment = RuntimeEnv::new(RuntimeConfig::new()).unwrap();
+        let runtime_environment = RuntimeEnv::try_new(RuntimeConfig::new()).unwrap();
 
         let session_config = SessionConfig::new().with_information_schema(true);
 
